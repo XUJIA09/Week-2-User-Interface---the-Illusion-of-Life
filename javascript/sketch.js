@@ -1,145 +1,146 @@
-let canvas;
-let button;
-
-let food = [];
-let foodLimit = 4;
-
-let hungry = 0;
-let full = 1;
-let tamaState = hungry;
-
-let tamaX;
-let tamaY;
-let tamaDiam;
+let par = [];
+let colors = [];
+let num = 300;
+let isPlaying = true;
 
 function setup() {
+  createCanvas(960, 540);
 
-  canvas = createCanvas(600, 600);
-  canvas.parent("sketch-container"); //move our canvas inside this HTML element
+  colors[0] = color(224, 172, 103,random(30,50));
+  colors[1] = color(24, 87, 91);
+  for (let i = 0; i < num; i++) {
+    par.push(new Par(random(width), random(height)));
+  }
+  background(50);
+  
+  playButton = createButton("Play");
+  playButton.style("background-color", "#4CAF50");
+  playButton.style("color", "white");
+  playButton.style("font-size", "20px");
+  playButton.style("padding", "10px 20px");
+  playButton.style("border", "0");
+  playButton.position(width/2- 110, height+ 10);
+  playButton.mousePressed(play);
+  
+  playButton.mouseOver(function() {
+    playButton.style("background-color", "#3e8e41");
+  });
+  playButton.mouseOut(function() {
+    playButton.style("background-color", "#4CAF50");
+  });
+  
+  
+  pauseButton = createButton("Pause");
+  pauseButton.style("background-color", "#f44336");
+  pauseButton.style("color", "white");
+  pauseButton.style("font-size", "20px");
+  pauseButton.style("padding", "10px 20px");
+  pauseButton.style("border", "0");
+  pauseButton.position(width/2-10, height+ 10);
+  pauseButton.mousePressed(pause);
+  
+   pauseButton.mouseOver(function() {
+   pauseButton.style("background-color", "#d32f2f");
+  });
+   pauseButton.mouseOut(function() {
+   pauseButton.style("background-color", "#f44336");
+  });
 
-  tamaX = width/2;
-  tamaY = height/2;
-  tamaDiam = width/6;
-
-  addGUI();
+  saveButton = createButton("Save");
+  saveButton.style("background-color", "#4C36F4");
+  saveButton.style("color", "white");
+  saveButton.style("font-size", "20px");
+  saveButton.style("padding", "10px 20px");
+  saveButton.style("border", "0");
+  saveButton.position(width/2+ 110, height+ 10);
+  saveButton.mousePressed(save1);
+  
+  saveButton.mouseOver(function() {
+  saveButton.style("background-color", "#31289F");
+  });
+  saveButton.mouseOut(function() {
+  saveButton.style("background-color", "#4C36F4");
+  });
 }
 
 function draw() {
-  background(200,200,250);
-  
-  //Drawing
-  noStroke();
-
-  if(tamaState == hungry){
-    fill(255);
-    if(tamaDiam > width/4){
-      tamaState = full;
-    }
-  }else if(tamaState == full){
-    fill(0,255,0);
-    if(tamaDiam > width/6){
-      if(frameCount % 2 == 0) tamaDiam--; // reduce every second frame
-    }else{
-      tamaState = hungry;
+  if (isPlaying) {
+  for (let j = par.length - 1; j > 0; j--) {
+    par[j].update();
+    par[j].show();
+    if (par[j].finished()) {
+      par.splice(j, 1.5);
+      background(0, 0, 0, 0);
     }
   }
-
-  circle(tamaX,tamaY,tamaDiam);
-  fill(0);
-  let mouthOffset = tamaDiam/2;
-  rect(tamaX-mouthOffset/2,tamaY,mouthOffset,3);
-
-  updateFood();//update and draw food
-
-  if(food.length > 0 && tamaState == hungry){
-    eatFood();
+	
+	for (let i = par.length; i < num; i++) {
+    par.push(new Par(random(width), random(height)));
   } 
-  
-  if(food.length <= foodLimit-1){
-    button.html("FEED");
-    button.removeClass("inactive");
-  }
+}
 }
 
-function updateFood(){
-  for(let i = food.length-1; i >= 0 ; i--){
-    fill(100);
-    circle(food[i].x,food[i].y,food[i].d);
-    food[i].y -= 1;
-    if(food[i].y < 0){
-      food.splice(i,1);//remove one from array at index i
+
+
+function Par(x, y) {
+  this.x = x;
+  this.y = y;
+  this.pos = createVector(this.x, this.y);
+
+  this.life = random(10);
+  this.c = color(random(colors));
+  this.ff = 10;
+
+  this.update = function () {
+    this.ff = noise(this.pos.x / 150, this.pos.y / 100) * TWO_PI; // Flow Field
+    let mainP = 1200;
+    let changeDir = TWO_PI / mainP; // location
+    let roundff = round((this.ff / TWO_PI) * mainP); 
+    this.ff = changeDir * roundff; // new location
+    
+    if (this.ff < 6 && this.ff > 3) {
+      this.c = colors[0];
+      stroke(this.c);
+      this.pos.add(tan(this.ff)*random(1,3), tan(this.ff));
+    } else {
+      this.c = colors[1];
+      stroke(this.c);
+      this.pos.sub(sin(this.ff)*random(0.1,1), cos(this.ff));
     }
-  }
+  };
+
+  this.show = function () {
+    noFill();
+    strokeWeight(random(1.25));
+    let lx = 20;
+    let ly = 20;
+    let px = constrain(this.pos.x, lx, width - lx);
+    let py = constrain(this.pos.y, ly, height - ly);
+    point(px, py);
+  };
+
+  this.finished = function () {
+    this.life -= random(random(random(random()))) / 10;
+	this.life = constrain(this.life, 0, 1);
+    if (this.life == 0) {
+      return true;
+    } else {
+      return false;
+    }
+  };
 }
 
-//This is a dumb creature who only eats the last bit of food added
-//How could you update this function so that you use a similar tactic as above in updateFood
-//loop backward through the food array, try:
-//eat all the food
-//OR eat the biggest piece of food
-function eatFood(){
-
-  //eats the last bit of food
-  // let distanceY =  tamaY - food[food.length-1].y;
-
-  // if(food[food.length-1].y > tamaY){
-  //   fill(0);
-  //   circle(tamaX,tamaY,tamaDiam/2);
+function play() {
+  isPlaying = true;
  
-  //   if(abs(distanceY) < 10){
-  //     tamaDiam += food[food.length-1].d;
-  //     food.pop();
-  //   }
-  // }
-
-  //Eats all the food
-  for(let i = food.length-1; i >= 0 ; i--){
-    let distanceY =  tamaY - food[i].y;
-
-    if(food[i].y > tamaX){
-      fill(0);
-      circle(tamaX,tamaY,tamaDiam/2);
-    }
-
-    if(abs(distanceY) < 10){
-      tamaDiam += food[food.length-1].d;
-      food.splice(i,1);
-    }
-  }
-
 }
 
-function addGUI()
-{
-
-  //add a button
-  button = createButton("FEED");
-
-  button.addClass("button");
-
-  //Add the play button to the parent gui HTML element
-  button.parent("gui-container");
-  
-  //Adding a mouse pressed event listener to the button 
-  button.mousePressed(handleButtonPress); 
-
-}
-
-function handleButtonPress()
-{
-    
-    if(food.length <= foodLimit-1){
-      food.push({
-          x:width/2,
-          y:height,
-          d:random(10,40)
-        });
-    }
-    
-    if(food.length > foodLimit-1){
-      button.html("FEEDING");
-      button.addClass("inactive");
-    }
+function pause() {
+  isPlaying = false;
   
 }
 
+function save1() {
+  saveCanvas("environment", "png");
+  
+}
